@@ -1,4 +1,485 @@
-첫번째 코드
-두번째 코드
-세번째 코드
-네번째 코드 수정
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>오늘의 날씨</title>
+<style>
+  :root {
+    --bg: #eef3fb;
+    --card: #ffffff;
+    --card-soft: #f4f7fc;
+    --text: #16233a;
+    --muted: #66748d;
+    --line: #dde4ef;
+    --accent: #3b7ddd;
+    --shadow: 0 10px 30px rgba(22, 35, 58, .09);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e1420;
+      --card: #18202f;
+      --card-soft: #202a3c;
+      --text: #e9eef7;
+      --muted: #97a3b8;
+      --line: #2a3446;
+      --accent: #6aa6ff;
+      --shadow: 0 10px 30px rgba(0, 0, 0, .35);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Pretendard", "Segoe UI", "Malgun Gothic", system-ui, sans-serif;
+    display: flex;
+    justify-content: center;
+    padding: 28px 16px 48px;
+  }
+  .app { width: 100%; max-width: 760px; }
+
+  h1 { font-size: 20px; margin: 0 0 16px; letter-spacing: -.3px; }
+
+  form.search {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 18px;
+  }
+  input[type="text"] {
+    flex: 1;
+    padding: 12px 14px;
+    font-size: 15px;
+    color: var(--text);
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    outline: none;
+  }
+  input[type="text"]:focus { border-color: var(--accent); }
+  button {
+    padding: 12px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+    background: var(--accent);
+    border: 0;
+    border-radius: 10px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  button.ghost {
+    color: var(--text);
+    background: var(--card);
+    border: 1px solid var(--line);
+  }
+  button:disabled { opacity: .55; cursor: default; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    padding: 22px;
+    margin-bottom: 16px;
+  }
+
+  .place { font-size: 15px; color: var(--muted); margin-bottom: 2px; }
+  .time { font-size: 13px; color: var(--muted); }
+
+  .now {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin: 14px 0 18px;
+    flex-wrap: wrap;
+  }
+  .icon { font-size: 62px; line-height: 1; }
+  .temp { font-size: 56px; font-weight: 700; letter-spacing: -2px; }
+  .desc { font-size: 17px; font-weight: 600; }
+  .feels { font-size: 14px; color: var(--muted); margin-top: 4px; }
+
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 10px;
+  }
+  .metric {
+    background: var(--card-soft);
+    border-radius: 12px;
+    padding: 12px 14px;
+  }
+  .metric .k { font-size: 12px; color: var(--muted); }
+  .metric .v { font-size: 17px; font-weight: 600; margin-top: 4px; }
+
+  h2 { font-size: 14px; color: var(--muted); margin: 0 0 12px; font-weight: 600; }
+
+  .hours {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding-bottom: 6px;
+  }
+  .hour {
+    flex: 0 0 auto;
+    width: 74px;
+    text-align: center;
+    background: var(--card-soft);
+    border-radius: 12px;
+    padding: 12px 6px;
+  }
+  .hour.is-now { outline: 2px solid var(--accent); }
+  .hour .h { font-size: 12px; color: var(--muted); }
+  .hour .i { font-size: 24px; margin: 6px 0; }
+  .hour .t { font-size: 15px; font-weight: 600; }
+  .hour .p { font-size: 11px; color: var(--accent); margin-top: 3px; min-height: 14px; }
+
+  .day {
+    display: grid;
+    grid-template-columns: 78px 34px 1fr auto;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-top: 1px solid var(--line);
+  }
+  .day:first-of-type { border-top: 0; }
+  .day .name { font-size: 14px; }
+  .day .i { font-size: 22px; text-align: center; }
+  .day .d { font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .day .r { font-size: 14px; font-variant-numeric: tabular-nums; }
+  .day .r .min { color: var(--muted); }
+
+  .status { font-size: 14px; color: var(--muted); }
+  .status.error { color: #e0564d; }
+  .hidden { display: none; }
+  footer { font-size: 12px; color: var(--muted); text-align: center; margin-top: 8px; }
+  footer a { color: inherit; }
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>오늘의 날씨</h1>
+
+  <form class="search" id="searchForm">
+    <input type="text" id="query" placeholder="도시 이름 (예: 서울, 부산, Tokyo)" autocomplete="off">
+    <button type="submit">검색</button>
+    <button type="button" class="ghost" id="geoBtn" title="현재 위치로 조회">내 위치</button>
+  </form>
+
+  <div class="card" id="statusCard">
+    <p class="status" id="status">날씨를 불러오는 중…</p>
+  </div>
+
+  <div id="result" class="hidden">
+    <section class="card">
+      <div class="place" id="place"></div>
+      <div class="time" id="obsTime"></div>
+
+      <div class="now">
+        <div class="icon" id="nowIcon"></div>
+        <div>
+          <div class="temp" id="nowTemp"></div>
+          <div class="desc" id="nowDesc"></div>
+          <div class="feels" id="nowFeels"></div>
+        </div>
+      </div>
+
+      <div class="metrics">
+        <div class="metric"><div class="k">습도</div><div class="v" id="mHumidity">-</div></div>
+        <div class="metric"><div class="k">강수량</div><div class="v" id="mPrecip">-</div></div>
+        <div class="metric"><div class="k">바람</div><div class="v" id="mWind">-</div></div>
+        <div class="metric"><div class="k">최고 / 최저</div><div class="v" id="mRange">-</div></div>
+        <div class="metric"><div class="k">일출 / 일몰</div><div class="v" id="mSun">-</div></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>시간별 예보</h2>
+      <div class="hours" id="hours"></div>
+    </section>
+
+    <section class="card">
+      <h2>주간 예보</h2>
+      <div id="days"></div>
+    </section>
+  </div>
+
+  <footer>데이터 제공: <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a></footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // WMO weather code -> 한글 설명 + 아이콘
+  var WMO = {
+    0:  ["맑음", "☀️", "🌙"],
+    1:  ["대체로 맑음", "🌤️", "🌙"],
+    2:  ["구름 조금", "⛅", "☁️"],
+    3:  ["흐림", "☁️", "☁️"],
+    45: ["안개", "🌫️", "🌫️"],
+    48: ["착빙 안개", "🌫️", "🌫️"],
+    51: ["약한 이슬비", "🌦️", "🌧️"],
+    53: ["이슬비", "🌦️", "🌧️"],
+    55: ["강한 이슬비", "🌧️", "🌧️"],
+    56: ["언 이슬비", "🌧️", "🌧️"],
+    57: ["강한 언 이슬비", "🌧️", "🌧️"],
+    61: ["약한 비", "🌦️", "🌧️"],
+    63: ["비", "🌧️", "🌧️"],
+    65: ["강한 비", "🌧️", "🌧️"],
+    66: ["언 비", "🌨️", "🌨️"],
+    67: ["강한 언 비", "🌨️", "🌨️"],
+    71: ["약한 눈", "🌨️", "🌨️"],
+    73: ["눈", "❄️", "❄️"],
+    75: ["강한 눈", "❄️", "❄️"],
+    77: ["싸락눈", "🌨️", "🌨️"],
+    80: ["약한 소나기", "🌦️", "🌧️"],
+    81: ["소나기", "🌧️", "🌧️"],
+    82: ["강한 소나기", "⛈️", "⛈️"],
+    85: ["소낙눈", "🌨️", "🌨️"],
+    86: ["강한 소낙눈", "❄️", "❄️"],
+    95: ["뇌우", "⛈️", "⛈️"],
+    96: ["우박 동반 뇌우", "⛈️", "⛈️"],
+    99: ["강한 우박 동반 뇌우", "⛈️", "⛈️"]
+  };
+
+  var $ = function (id) { return document.getElementById(id); };
+  var statusEl = $("status");
+  var statusCard = $("statusCard");
+  var resultEl = $("result");
+
+  function describe(code) { return (WMO[code] || ["정보 없음"])[0]; }
+  function iconOf(code, isDay) {
+    var e = WMO[code];
+    if (!e) return "❓";
+    return isDay === 0 ? e[2] : e[1];
+  }
+
+  function showStatus(msg, isError) {
+    statusEl.textContent = msg;
+    statusEl.className = isError ? "status error" : "status";
+    statusCard.classList.remove("hidden");
+  }
+  function hideStatus() { statusCard.classList.add("hidden"); }
+
+  function fmtTemp(v) { return Math.round(v) + "°"; }
+  function hhmm(iso) { return iso.slice(11, 16); }
+
+  // "2026-08-16T15:00" 형태를 로컬 시간대 해석 없이 그대로 다루기 위한 파싱
+  function localDate(iso) {
+    var m = iso.match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?$/);
+    if (!m) return new Date(iso);
+    return new Date(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0));
+  }
+
+  function dayName(iso, index) {
+    if (index === 0) return "오늘";
+    if (index === 1) return "내일";
+    var names = ["일", "월", "화", "수", "목", "금", "토"];
+    var d = localDate(iso);
+    return (d.getMonth() + 1) + "/" + d.getDate() + " (" + names[d.getDay()] + ")";
+  }
+
+  function getJSON(url) {
+    return fetch(url).then(function (res) {
+      if (!res.ok) throw new Error("요청 실패 (" + res.status + ")");
+      return res.json();
+    });
+  }
+
+  function loadWeather(lat, lon, label) {
+    showStatus("날씨를 불러오는 중…", false);
+    resultEl.classList.add("hidden");
+
+    var url = "https://api.open-meteo.com/v1/forecast" +
+      "?latitude=" + encodeURIComponent(lat) +
+      "&longitude=" + encodeURIComponent(lon) +
+      "&current=temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,weather_code,wind_speed_10m,is_day" +
+      "&hourly=temperature_2m,weather_code,precipitation_probability,is_day" +
+      "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset" +
+      "&timezone=auto&forecast_days=7";
+
+    return getJSON(url).then(function (data) {
+      render(data, label);
+      hideStatus();
+    });
+  }
+
+  function render(data, label) {
+    var cur = data.current;
+    var daily = data.daily;
+
+    $("place").textContent = label;
+    $("obsTime").textContent = localDate(cur.time).toLocaleString("ko-KR", {
+      month: "long", day: "numeric", weekday: "short", hour: "2-digit", minute: "2-digit"
+    }) + " 기준";
+
+    $("nowIcon").textContent = iconOf(cur.weather_code, cur.is_day);
+    $("nowTemp").textContent = fmtTemp(cur.temperature_2m);
+    $("nowDesc").textContent = describe(cur.weather_code);
+    $("nowFeels").textContent = "체감 " + fmtTemp(cur.apparent_temperature);
+
+    $("mHumidity").textContent = cur.relative_humidity_2m + "%";
+    $("mPrecip").textContent = cur.precipitation + " mm";
+    $("mWind").textContent = cur.wind_speed_10m + " km/h";
+    $("mRange").textContent = fmtTemp(daily.temperature_2m_max[0]) + " / " +
+      fmtTemp(daily.temperature_2m_min[0]);
+    $("mSun").textContent = hhmm(daily.sunrise[0]) + " / " + hhmm(daily.sunset[0]);
+
+    renderHours(data.hourly, cur.time);
+    renderDays(daily);
+
+    resultEl.classList.remove("hidden");
+  }
+
+  function renderHours(hourly, currentTime) {
+    var box = $("hours");
+    box.textContent = "";
+
+    // 현재 시각 이후 24시간
+    var start = hourly.time.findIndex(function (t) { return t.slice(0, 13) >= currentTime.slice(0, 13); });
+    if (start < 0) start = 0;
+
+    for (var i = start; i < Math.min(start + 24, hourly.time.length); i++) {
+      var el = document.createElement("div");
+      el.className = "hour" + (i === start ? " is-now" : "");
+
+      var h = document.createElement("div");
+      h.className = "h";
+      h.textContent = i === start ? "지금" : hourly.time[i].slice(11, 13) + "시";
+
+      var ic = document.createElement("div");
+      ic.className = "i";
+      ic.textContent = iconOf(hourly.weather_code[i], hourly.is_day[i]);
+
+      var t = document.createElement("div");
+      t.className = "t";
+      t.textContent = fmtTemp(hourly.temperature_2m[i]);
+
+      var p = document.createElement("div");
+      p.className = "p";
+      var prob = hourly.precipitation_probability[i];
+      p.textContent = prob > 0 ? prob + "%" : "";
+
+      el.appendChild(h); el.appendChild(ic); el.appendChild(t); el.appendChild(p);
+      box.appendChild(el);
+    }
+  }
+
+  function renderDays(daily) {
+    var box = $("days");
+    box.textContent = "";
+
+    for (var i = 0; i < daily.time.length; i++) {
+      var row = document.createElement("div");
+      row.className = "day";
+
+      var name = document.createElement("div");
+      name.className = "name";
+      name.textContent = dayName(daily.time[i], i);
+
+      var ic = document.createElement("div");
+      ic.className = "i";
+      ic.textContent = iconOf(daily.weather_code[i], 1);
+
+      var d = document.createElement("div");
+      d.className = "d";
+      var prob = daily.precipitation_probability_max[i];
+      d.textContent = describe(daily.weather_code[i]) + (prob > 0 ? " · 강수 " + prob + "%" : "");
+
+      var r = document.createElement("div");
+      r.className = "r";
+      var min = document.createElement("span");
+      min.className = "min";
+      min.textContent = " / " + fmtTemp(daily.temperature_2m_min[i]);
+      r.appendChild(document.createTextNode(fmtTemp(daily.temperature_2m_max[i])));
+      r.appendChild(min);
+
+      row.appendChild(name); row.appendChild(ic); row.appendChild(d); row.appendChild(r);
+      box.appendChild(row);
+    }
+  }
+
+  // Open-Meteo 지오코딩은 한글 도시명을 제대로 찾지 못한다.
+  // (예: "서울" → 결과 없음, "부산" → 의성군의 동명 마을)
+  // 국내 주요 도시는 로마자 이름으로 바꿔서 조회한다.
+  var KO_CITY = {
+    "서울": "Seoul", "부산": "Busan", "인천": "Incheon", "대구": "Daegu",
+    "대전": "Daejeon", "광주": "Gwangju", "울산": "Ulsan", "세종": "Sejong",
+    "수원": "Suwon", "성남": "Seongnam", "용인": "Yongin", "고양": "Goyang",
+    "창원": "Changwon", "청주": "Cheongju", "전주": "Jeonju", "천안": "Cheonan",
+    "안산": "Ansan", "안양": "Anyang", "남양주": "Namyangju", "화성": "Hwaseong",
+    "평택": "Pyeongtaek", "의정부": "Uijeongbu", "김해": "Gimhae", "포항": "Pohang",
+    "구미": "Gumi", "경주": "Gyeongju", "진주": "Jinju", "여수": "Yeosu",
+    "목포": "Mokpo", "제주": "Jeju", "서귀포": "Seogwipo", "강릉": "Gangneung",
+    "춘천": "Chuncheon", "원주": "Wonju", "속초": "Sokcho", "파주": "Paju",
+    "김포": "Gimpo", "시흥": "Siheung", "부천": "Bucheon", "광명": "Gwangmyeong",
+    "군산": "Gunsan", "익산": "Iksan", "충주": "Chungju", "안동": "Andong",
+    "양산": "Yangsan", "거제": "Geoje", "통영": "Tongyeong", "순천": "Suncheon"
+  };
+
+  function normalize(name) {
+    var base = name.replace(/\s+/g, "")
+      .replace(/(특별자치시|특별자치도|특별시|광역시|시|군|구)$/, "");
+    return KO_CITY[base] || KO_CITY[name] || name;
+  }
+
+  // 인구가 가장 많은 후보를 선택한다. count=1로는 동명의 소규모 지역이 걸린다.
+  function pickBest(results) {
+    var best = results[0];
+    for (var i = 1; i < results.length; i++) {
+      if ((results[i].population || 0) > (best.population || 0)) best = results[i];
+    }
+    return best;
+  }
+
+  function searchCity(name) {
+    showStatus('"' + name + '" 검색 중…', false);
+    var url = "https://geocoding-api.open-meteo.com/v1/search?name=" +
+      encodeURIComponent(normalize(name)) + "&count=10&language=ko&format=json";
+
+    return getJSON(url).then(function (geo) {
+      if (!geo.results || !geo.results.length) {
+        throw new Error('"' + name + '" 위치를 찾을 수 없습니다. 영문 이름(예: Seoul)으로도 검색해 보세요.');
+      }
+      var r = pickBest(geo.results);
+      var label = [r.name, r.admin1, r.country].filter(Boolean).join(", ");
+      return loadWeather(r.latitude, r.longitude, label);
+    });
+  }
+
+  function useMyLocation() {
+    if (!navigator.geolocation) {
+      showStatus("이 브라우저는 위치 기능을 지원하지 않습니다. 도시 이름으로 검색해 주세요.", true);
+      return;
+    }
+    showStatus("현재 위치를 확인하는 중…", false);
+    navigator.geolocation.getCurrentPosition(
+      function (pos) {
+        loadWeather(pos.coords.latitude, pos.coords.longitude, "현재 위치")
+          .catch(function (e) { showStatus(e.message, true); });
+      },
+      function () {
+        showStatus("위치 권한을 사용할 수 없어 서울 날씨를 표시합니다.", true);
+        searchCity("서울").catch(function (e) { showStatus(e.message, true); });
+      },
+      { timeout: 8000 }
+    );
+  }
+
+  $("searchForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var q = $("query").value.trim();
+    if (!q) return;
+    searchCity(q).catch(function (err) { showStatus(err.message, true); });
+  });
+
+  $("geoBtn").addEventListener("click", useMyLocation);
+
+  // 첫 진입: 위치 권한을 물어보고, 거부되면 서울로 대체
+  useMyLocation();
+})();
+</script>
+</body>
+</html>
